@@ -7,7 +7,7 @@ prefix as a variable-length integer.  This provides a slightly more compact payl
 
 Pronnounced *netster*.
 
-[![GoDoc](https://godoc.org/github.com/lthibault/netstr?status.svg)](https://godoc.org/github.com/lthibault/netstr)
+[![Godoc Reference](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://godoc.org/github.com/lthibault/netstr)
 
 ## Installation
 
