@@ -1,14 +1,13 @@
 # NetStr
 
-Fast, compact netstring serialization.  Contrary to a number of netstring
-implementations, `netstr` encodes the length prefix as a `uint32`, thus ensuring
-a fixed overhead of just 5 bytes.
+Fast binary-netstring encoding for variable-length data.
+
+Contrary to a number the standard netstring format, `netstr` encodes the length
+prefix as a variable-length integer.  This provides a slightly more compact payload.
 
 Pronnounced *netster*.
 
 [![GoDoc](https://godoc.org/github.com/lthibault/netstr?status.svg)](https://godoc.org/github.com/lthibault/netstr)
-
-Composable utilities for Go contexts.
 
 ## Installation
 
@@ -24,6 +23,7 @@ Seriously, even if you just used it in your weekend project, I'd like to hear
 about it :)
 
 ## License
+
 The MIT License
 
 Copyright (c) 2017 Louis Thibault
