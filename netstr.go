@@ -46,11 +46,11 @@ func (str *Str) UnmarshalBinary(b []byte) error {
 func readNetStr(r io.Reader) (Str, error) {
 	var i int
 
-	hdr := make([]byte, 8)
+	hdr := make([]byte, binary.MaxVarintLen64)
 	br := bufio.NewReader(r)
 
 	for {
-		if i > 7 {
+		if i > binary.MaxVarintLen64-1 {
 			return nil, errors.New("invalid header:  exceeds 64 bits")
 		}
 
