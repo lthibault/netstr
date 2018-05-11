@@ -1,14 +1,16 @@
 package netstr
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"io"
+	"sync"
 	"unsafe"
 
 	"github.com/pkg/errors"
 )
+
+var pool = sync.Pool{New: func() interface{} { return make([]byte, 1) }}
 
 // Str is a netstring
 type Str []byte
@@ -47,7 +49,7 @@ func readNetStr(r io.Reader) (Str, error) {
 	var i int
 
 	hdr := make([]byte, binary.MaxVarintLen64)
-	br := bufio.NewReader(r)
+	br := byteReader{r}
 
 	for {
 		if i > binary.MaxVarintLen64-1 {
@@ -79,6 +81,15 @@ func readNetStr(r io.Reader) (Str, error) {
 	}
 
 	return s, nil
+}
+
+type byteReader struct{ io.Reader }
+
+func (r byteReader) ReadByte() (byte, error) {
+	b := pool.Get().([]byte)
+	defer pool.Put(b)
+	_, err := io.ReadFull(r, b)
+	return b[0], err
 }
 
 // An Encoder writes netstr values to an output stream.
