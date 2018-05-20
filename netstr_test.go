@@ -96,6 +96,10 @@ func TestEncoder(t *testing.T) {
 }
 
 func TestSplit(t *testing.T) {
+
+	// NOTE:  bufio.Scanner interprets output from bufio.SplitFunc in a very
+	//		  specific way.  https://golang.org/pkg/bufio/#SplitFunc
+
 	var (
 		advance int
 		token   []byte
@@ -127,14 +131,33 @@ func TestSplit(t *testing.T) {
 		// })
 	})
 
-	// t.Run("Body", func(t *testing.T) {
-	// 	t.Run("Underrun", func(t *testing.T) {
-	// 		t.Run("EOF", func(t *testing.T) {})
-	// 		t.Run("ReadMore", func(t *testing.T) {})
-	// 	})
+	t.Run("Body", func(t *testing.T) {
+		b := make([]byte, binary.MaxVarintLen64)
+		b = b[:binary.PutUvarint(b, 12)]
 
-	// 	t.Run("Success", func(t *testing.T) {})
-	// })
+		t.Run("Underrun", func(t *testing.T) {
+			t.Run("EOF", func(t *testing.T) {
+				advance, token, err = Split(append(b, []byte("hello")...), true)
+				assert.Zero(t, advance)
+				assert.Nil(t, token)
+				assert.Error(t, err)
+			})
+
+			t.Run("ReadMore", func(t *testing.T) {
+				advance, token, err = Split(append(b, []byte("hello")...), false)
+				assert.Zero(t, advance)
+				assert.Nil(t, token)
+				assert.NoError(t, err)
+			})
+		})
+
+		t.Run("Success", func(t *testing.T) {
+			advance, token, err = Split(append(b, []byte("hello, world. foo bar.")...), true)
+			assert.Equal(t, 13, advance) // 12 + 1 varint
+			assert.Equal(t, "hello, world", string(token))
+			assert.NoError(t, err)
+		})
+	})
 }
 
 // func TestDecoder(t *testing.T) {
