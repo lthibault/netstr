@@ -95,7 +95,7 @@ func (d *Decoder) Reset(r io.Reader) {
 // Decode reads the next netstr-encoded value from its input and stores it in
 // the netstr s
 func (d *Decoder) Decode() (Str, error) {
-	if d.scanner.Err() != nil && !d.eof {
+	if d.scanner.Err() == nil && !d.eof {
 		d.eof = !d.scanner.Scan()
 	}
 
