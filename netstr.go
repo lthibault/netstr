@@ -16,8 +16,9 @@ var pool = sync.Pool{New: func() interface{} { return make([]byte, 1) }}
 type Str []byte
 
 // String satisfies fmt.Stringer, returning the payload of the Str
-func (str *Str) String() string { return string(*str) }
+func (str Str) String() string { return string(str) }
 
+// hdr is a binary representation of the string length
 func (str Str) hdr() []byte {
 	b := make([]byte, 8)
 	i := binary.PutUvarint(b, uint64(len(str)))
@@ -31,18 +32,12 @@ func (str Str) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary implements encoding.BinaryUnmarshaller
-func (str *Str) UnmarshalBinary(b []byte) error {
-	switch strLen, i := binary.Uvarint(b); {
-	case i == 0:
-		return errors.New("not enough data")
-	case i < 0:
-		return errors.New("invalid header:  exceeds 64 bits")
-	case int(strLen)+i != len(b):
-		return errors.Errorf("expected message of len %d, got %d", strLen, len(b)-i)
-	default:
-		*str = b[i:]
-		return nil
+func (str *Str) UnmarshalBinary(b []byte) (err error) {
+	var advance int
+	if advance, *str, err = Split(b, true); advance != len(b) {
+		err = errors.Errorf("expected message of len %d, got %d", len(b), advance)
 	}
+	return
 }
 
 func readNetStr(r io.Reader) (Str, error) {
@@ -146,4 +141,29 @@ func (d *Decoder) Decode() (Str, error) {
 	}
 
 	return s, d.err
+}
+
+// Split is a bufio.SplitFunc that allows a scanner to tokenize a stream into
+// raw (encoded) netstrs.
+func Split(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	length, i := binary.Uvarint(data)
+	switch {
+	case i == 0:
+		if atEOF {
+			return 0, nil, errors.New("EOF occurred before end of header")
+		}
+		return 0, nil, nil // ask for more data
+	case i < 0:
+		return 0, nil, errors.New("invalid header:  exceeds 64 bits")
+	}
+
+	if len(data) < int(length)-i {
+		if atEOF {
+			return 0, nil, errors.New("EOF occurred before end of body")
+		}
+
+		return 0, nil, nil
+	}
+
+	return i + int(length), data[i:], nil
 }
