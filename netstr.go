@@ -1,11 +1,11 @@
 package netstr
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"io"
 	"sync"
-	"unsafe"
 
 	"github.com/pkg/errors"
 )
@@ -18,17 +18,21 @@ type Str []byte
 // String satisfies fmt.Stringer, returning the payload of the Str
 func (str Str) String() string { return string(str) }
 
-// hdr is a binary representation of the string length
-func (str Str) hdr() []byte {
+// ByteLen is a binary representation of the string length
+func (str Str) ByteLen() []byte {
 	b := make([]byte, 8)
-	i := binary.PutUvarint(b, uint64(len(str)))
-	return b[:i]
+	return b[:binary.PutUvarint(b, uint64(len(str)))]
 }
 
-// MarshalBinary implements encoding.BinaryMarshaller
+// Encode returns the netstr-encoded data
+func (str Str) Encode() []byte {
+	return append(str.ByteLen(), str...)
+}
+
+// MarshalBinary is a wrapper around Encode that implements
+// encoding.BinaryMarshaller.  `err` is always nil.
 func (str Str) MarshalBinary() ([]byte, error) {
-	h := str.hdr()
-	return append(h, str...), nil
+	return str.Encode(), nil
 }
 
 // UnmarshalBinary implements encoding.BinaryUnmarshaller
@@ -38,53 +42,6 @@ func (str *Str) UnmarshalBinary(b []byte) (err error) {
 		err = errors.Errorf("expected message of len %d, got %d", len(b), advance)
 	}
 	return
-}
-
-func readNetStr(r io.Reader) (Str, error) {
-	var i int
-
-	hdr := make([]byte, binary.MaxVarintLen64)
-	br := byteReader{r}
-
-	for {
-		if i > binary.MaxVarintLen64-1 {
-			return nil, errors.New("invalid header:  exceeds 64 bits")
-		}
-
-		b, err := br.ReadByte()
-		if err != nil {
-			return nil, errors.Wrapf(err, "read byte %d of header", i)
-		}
-
-		hdr[i] = b
-		if *(*uint8)(unsafe.Pointer(&b))&uint8(128) == 0 {
-			hdr = hdr[:i]
-			break
-		}
-
-		i++
-	}
-
-	strLen, i := binary.Uvarint(hdr)
-	if i != len(hdr) {
-		panic("header parse succeeded, but binary decode failed")
-	}
-
-	var s Str = make([]byte, strLen)
-	if _, err := io.ReadFull(r, s); err != nil {
-		return nil, errors.Wrap(err, "read msg body")
-	}
-
-	return s, nil
-}
-
-type byteReader struct{ io.Reader }
-
-func (r byteReader) ReadByte() (byte, error) {
-	b := pool.Get().([]byte)
-	defer pool.Put(b)
-	_, err := io.ReadFull(r, b)
-	return b[0], err
 }
 
 // An Encoder writes netstr values to an output stream.
@@ -107,7 +64,7 @@ func (e *Encoder) Reset(w io.Writer) {
 // Encode writes the netstr encoding of s to the stream
 func (e *Encoder) Encode(s Str) error {
 	if e.err == nil {
-		if _, e.err = io.Copy(e.w, bytes.NewBuffer(s.hdr())); e.err == nil {
+		if _, e.err = io.Copy(e.w, bytes.NewBuffer(s.ByteLen())); e.err == nil {
 			_, e.err = io.Copy(e.w, bytes.NewBuffer(s))
 		}
 	}
@@ -117,30 +74,36 @@ func (e *Encoder) Encode(s Str) error {
 
 // A Decoder reads and decodes netstr values from an input stream.
 type Decoder struct {
-	err error
-	r   io.Reader
+	eof     bool
+	scanner *bufio.Scanner
 }
 
 // NewDecoder returns a new decoder that reads from r
-func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r}
+func NewDecoder(r io.Reader) (dec *Decoder) {
+	dec = new(Decoder)
+	dec.Reset(r)
+	return
 }
 
 // Reset the decoder with a new Reader
 func (d *Decoder) Reset(r io.Reader) {
-	d.r = r
-	d.err = nil
+	d.scanner = bufio.NewScanner(r)
+	d.scanner.Split(Split)
+	d.eof = false
 }
 
 // Decode reads the next netstr-encoded value from its input and stores it in
 // the netstr s
 func (d *Decoder) Decode() (Str, error) {
-	var s Str
-	if d.err == nil {
-		s, d.err = readNetStr(d.r)
+	if d.scanner.Err() != nil && !d.eof {
+		d.eof = !d.scanner.Scan()
 	}
 
-	return s, d.err
+	if d.eof {
+		return nil, io.EOF
+	}
+
+	return d.scanner.Bytes(), d.scanner.Err()
 }
 
 // Split is a bufio.SplitFunc that allows a scanner to tokenize a stream into
