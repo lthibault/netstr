@@ -12,7 +12,7 @@ Pronnounced *netster*.
 ## Installation
 
 ```bash
-go get -u github.com/SentimensRG/netstr
+go get -u github.com/lthibault/netstr
 ```
 
 ## RFC
