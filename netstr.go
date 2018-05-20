@@ -20,7 +20,7 @@ func (str Str) String() string { return string(str) }
 
 // ByteLen is a binary representation of the string length
 func (str Str) ByteLen() []byte {
-	b := make([]byte, 8)
+	b := make([]byte, binary.MaxVarintLen64)
 	return b[:binary.PutUvarint(b, uint64(len(str)))]
 }
 
@@ -128,5 +128,5 @@ func Split(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		return 0, nil, nil
 	}
 
-	return i + int(length), data[i:], nil
+	return i + int(length), data[i : i+int(length)], nil
 }
