@@ -74,7 +74,6 @@ func (e *Encoder) Encode(s Str) error {
 
 // A Decoder reads and decodes netstr values from an input stream.
 type Decoder struct {
-	eof     bool
 	scanner *bufio.Scanner
 }
 
@@ -89,18 +88,13 @@ func NewDecoder(r io.Reader) (dec *Decoder) {
 func (d *Decoder) Reset(r io.Reader) {
 	d.scanner = bufio.NewScanner(r)
 	d.scanner.Split(Split)
-	d.eof = false
 }
 
 // Decode reads the next netstr-encoded value from its input and stores it in
 // the netstr s
 func (d *Decoder) Decode() (Str, error) {
-	if d.scanner.Err() == nil && !d.eof {
-		d.eof = !d.scanner.Scan() && d.scanner.Err() == nil
-	}
-
-	if d.eof {
-		return nil, io.EOF
+	if d.scanner.Err() == nil {
+		d.scanner.Scan()
 	}
 
 	return d.scanner.Bytes(), d.scanner.Err()

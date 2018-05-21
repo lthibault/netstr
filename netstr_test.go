@@ -3,7 +3,6 @@ package netstr
 import (
 	"bytes"
 	"encoding/binary"
-	"io"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -161,21 +160,17 @@ func TestDecoder(t *testing.T) {
 			str, err := dec.Decode()
 			assert.NoError(t, err)
 			assert.Equal(t, "foo", str.String())
-			assert.False(t, dec.eof)
 		})
 
 		t.Run("EOF", func(t *testing.T) {
 			_, err := dec.Decode()
-			assert.Equal(t, err, io.EOF)
 			assert.Error(t, err)
-			assert.True(t, dec.eof)
 		})
 	})
 
 	t.Run("Reset", func(t *testing.T) {
 		buf := new(bytes.Buffer)
 		dec.Reset(buf)
-		assert.False(t, dec.eof)
 		assert.NoError(t, dec.scanner.Err())
 	})
 }
