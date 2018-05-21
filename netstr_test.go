@@ -6,6 +6,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,34 +65,21 @@ func TestStr(t *testing.T) {
 }
 
 func TestEncoder(t *testing.T) {
-	var dec *Decoder
+	buf := new(bytes.Buffer)
+	enc := NewEncoder(buf)
 
 	t.Run("Encode", func(t *testing.T) {
-		t.Run("Success", func(t *testing.T) {
-			b := make([]byte, binary.MaxVarintLen64)
-			b = append(b[:binary.PutUvarint(b, 3)], []byte("foo")...)
-
-			dec = NewDecoder(bytes.NewBuffer(b))
-
-			str, err := dec.Decode()
-			assert.NoError(t, err)
-			assert.Equal(t, "foo", str.String())
-			assert.False(t, dec.eof)
-		})
-
-		t.Run("EOF", func(t *testing.T) {
-			_, err := dec.Decode()
-			assert.Equal(t, err, io.EOF)
-			assert.Error(t, err)
-			assert.True(t, dec.eof)
-		})
+		assert.NoError(t, enc.Encode([]byte("hello")))
+		assert.Len(t, buf.Bytes(), 6)
+		assert.Equal(t, []byte{0x5, 'h', 'e', 'l', 'l', 'o'}, buf.Bytes())
 	})
 
 	t.Run("Reset", func(t *testing.T) {
-		buf := new(bytes.Buffer)
-		dec.Reset(buf)
-		assert.False(t, dec.eof)
-		assert.NoError(t, dec.scanner.Err())
+		b := new(bytes.Buffer)
+		enc.err = errors.New("test")
+		enc.Reset(b)
+		assert.Equal(t, b, enc.w)
+		assert.NoError(t, enc.err)
 	})
 }
 
@@ -160,12 +148,34 @@ func TestSplit(t *testing.T) {
 	})
 }
 
-// func TestDecoder(t *testing.T) {
-// 	t.Run("Decode", func(t *testing.T) {
-// 		t.Run("Success", func(t *testing.T) {})
-// 		t.Run("Failure", func(t *testing.T) {})
-// 	})
+func TestDecoder(t *testing.T) {
+	var dec *Decoder
 
-// 	t.Run("Reset", func(t *testing.T) {
-// 	})
-// }
+	t.Run("Decode", func(t *testing.T) {
+		t.Run("Success", func(t *testing.T) {
+			b := make([]byte, binary.MaxVarintLen64)
+			b = append(b[:binary.PutUvarint(b, 3)], []byte("foo")...)
+
+			dec = NewDecoder(bytes.NewBuffer(b))
+
+			str, err := dec.Decode()
+			assert.NoError(t, err)
+			assert.Equal(t, "foo", str.String())
+			assert.False(t, dec.eof)
+		})
+
+		t.Run("EOF", func(t *testing.T) {
+			_, err := dec.Decode()
+			assert.Equal(t, err, io.EOF)
+			assert.Error(t, err)
+			assert.True(t, dec.eof)
+		})
+	})
+
+	t.Run("Reset", func(t *testing.T) {
+		buf := new(bytes.Buffer)
+		dec.Reset(buf)
+		assert.False(t, dec.eof)
+		assert.NoError(t, dec.scanner.Err())
+	})
+}
