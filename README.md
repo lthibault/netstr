@@ -2,7 +2,7 @@
 
 Fast binary-netstring encoding for variable-length data.
 
-Contrary to a number the standard netstring format, `netstr` encodes the length
+Contrary to the standard netstring format, `netstr` encodes the length
 prefix as a variable-length integer.  This provides a slightly more compact payload.
 
 Pronnounced *netster*.
