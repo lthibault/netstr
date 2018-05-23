@@ -8,6 +8,7 @@ prefix as a variable-length integer.  This provides a slightly more compact payl
 Pronnounced *netster*.
 
 [![Godoc Reference](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://godoc.org/github.com/lthibault/netstr)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lthibault/netstr?style=flat-square)](https://goreportcard.com/report/github.com/lthibault/netstr)
 
 ## Installation
 
