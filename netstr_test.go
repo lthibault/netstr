@@ -54,12 +54,19 @@ func TestStr(t *testing.T) {
 
 		t.Run("UnmarshalBinary", func(t *testing.T) {
 			var str Str
-
 			b := make([]byte, binary.MaxVarintLen64)
 			b = append(b[:binary.PutUvarint(b, 3)], []byte("foo")...)
 
-			assert.NoError(t, str.UnmarshalBinary(b))
-			assert.Equal(t, "foo", str.String())
+			t.Run("Succeed", func(t *testing.T) {
+				assert.NoError(t, str.UnmarshalBinary(b))
+				assert.Equal(t, "foo", str.String())
+			})
+
+			t.Run("Fail", func(t *testing.T) {
+				b = append(b, []byte("extra")...)
+				assert.Error(t, str.UnmarshalBinary(b))
+				assert.Equal(t, "foo", str.String())
+			})
 		})
 	})
 }
@@ -115,7 +122,15 @@ func TestSplit(t *testing.T) {
 		})
 
 		// t.Run("Overrun", func(t *testing.T) {
-		// 	// TODO
+		// 	badhdr := make([]byte, 20)
+		// 	for i := 0; i < 20; i++ {
+		// 		badhdr[i] = 0xFF
+		// 	}
+
+		// 	advance, token, err = Split(badhdr, false)
+		// 	assert.Zero(t, advance)
+		// 	assert.Nil(t, token)
+		// 	assert.Error(t, err)
 		// })
 	})
 
