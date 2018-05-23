@@ -3,6 +3,7 @@ package netstr
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -173,4 +174,31 @@ func TestDecoder(t *testing.T) {
 		dec.Reset(buf)
 		assert.NoError(t, dec.scanner.Err())
 	})
+}
+
+func ExampleStr() {
+	var s Str = []byte("hello, world")
+
+	// Encode the data as a netstr.  Note the extra byte at the beginning of the
+	// output that represents the length of the payload.
+	fmt.Println(s.Encode())
+	// Output: [12 104 101 108 108 111 44 32 119 111 114 108 100]
+}
+
+func ExampleEncoder() {
+	buf := new(bytes.Buffer)
+
+	// Str is just a []byte, so we can just pass a byte array directly
+	_ = NewEncoder(buf).Encode([]byte("hello, world"))
+
+	fmt.Println(buf.Bytes())
+	// Output: [12 104 101 108 108 111 44 32 119 111 114 108 100]
+}
+
+func ExampleDecoder() {
+	buf := bytes.NewBuffer(Str("hello, world").Encode())
+
+	s, _ := NewDecoder(buf).Decode()
+	fmt.Println(s.String())
+	// Output: hello, world
 }
