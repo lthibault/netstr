@@ -5,12 +5,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
-	"sync"
 
 	"github.com/pkg/errors"
 )
-
-var pool = sync.Pool{New: func() interface{} { return make([]byte, 1) }}
 
 // Str is a netstring
 type Str []byte
